@@ -1,0 +1,8 @@
+[package]
+name = "cryptorusticon"
+version = "0.1.0"
+edition = "2021"
+
+[dependencies]
+num = "0.4.0"
+num-prime = "0.4.3"
