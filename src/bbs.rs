@@ -56,6 +56,7 @@ impl BBS {
 
     pub fn next(&mut self) -> bool {
         self.seed = self.seed.modpow(&BigUint::from(2u32), &self.M);
+        // TODO: better visualisation of seed change or keeping track of it?
         // print!("new seed: {:?}\n", self.seed);
         self.seed.bit(0)
     }
@@ -101,6 +102,8 @@ impl BBS {
         let bit_string = self.get_n_bits(128);
         u128::from_str_radix(&bit_string, 2).unwrap()
     }
+
+    // TODO: implement generate functions for signed integers
 }
 
 impl Default for BBS {
