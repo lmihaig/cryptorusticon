@@ -1,7 +1,11 @@
 #![allow(non_snake_case)]
 
+use num::bigint::ToBigUint;
 use num::{BigUint, Integer, One};
 use num_prime::nt_funcs::is_prime;
+use num_prime::RandPrime;
+use rand::rngs::StdRng;
+use rand::SeedableRng;
 pub struct BBS {
     p: BigUint,
     q: BigUint,
@@ -25,6 +29,34 @@ impl BBS {
         if M.gcd(&seed) != BigUint::one() {
             errors.push(format!("{} not coprime with {}", seed, M));
             return Err(errors);
+        }
+        Ok(BBS { p, q, M, seed })
+    }
+
+    pub fn with_random_primes(num_bits: usize, seed_string: u64) -> Result<BBS, String> {
+        if num_bits < 256 {
+            return Err(format!("{} less than minimum 256 bits", num_bits));
+        }
+        let mut rng = StdRng::seed_from_u64(seed_string);
+        let seed = seed_string.to_biguint().unwrap();
+        let mut p: BigUint;
+        let mut q: BigUint;
+        let mut M: BigUint;
+
+        loop {
+            p = rng.gen_prime(num_bits, None);
+            q = rng.gen_prime(num_bits, None);
+
+            if !Self::check_primes_validity(&p, &q).is_empty() {
+                continue;
+            }
+
+            M = &p * &q;
+            if M.gcd(&seed) != BigUint::one() {
+                continue;
+            }
+
+            break;
         }
         Ok(BBS { p, q, M, seed })
     }

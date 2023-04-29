@@ -1,8 +1,8 @@
 use std::cell::RefCell;
 use std::fmt;
 use std::rc::{Rc, Weak};
-
-enum Value {
+#[derive(PartialEq)]
+pub enum Value {
     Ace,
     Two,
     Three,
@@ -18,21 +18,21 @@ enum Value {
     King,
     Joker,
 }
-
-enum Suit {
+#[derive(PartialEq)]
+pub enum Suit {
     Spades,
     Hearts,
     Clubs,
     Diamonds,
 }
 
-struct CardData {
+#[derive(PartialEq)]
+pub struct CardData {
     value: Value,
     suit: Suit,
 }
-
 impl CardData {
-    pub fn string_to_carddata(input: &str) -> Option<CardData> {
+    pub fn from_str(input: &str) -> Option<CardData> {
         if input == "BJ" {
             return Some(CardData {
                 value: Value::Joker,
@@ -77,23 +77,43 @@ impl CardData {
         Some(CardData { value, suit })
     }
 
-    // pub fn string_to_cards(input: &str) -> Result<Vec<Card>, String> {
-    //     let cards_strings: Vec<&str> = input.split_whitespace().collect();
-    //     let mut cards = Vec::with_capacity(cards_strings.len());
+    pub fn to_str(&self) -> String {
+        let mut suit_char = match self.suit {
+            Suit::Spades => 'S',
+            Suit::Hearts => 'H',
+            Suit::Clubs => 'C',
+            Suit::Diamonds => 'D',
+        };
 
-    //     for card_string in cards_strings {
-    //         let card = Self::string_to_card(card_string)?;
-    //         cards.push(card);
-    //     }
-
-    //     if Self::valid_deck(cards) {
-    //         return cards;
-    //     }
-    //     Err("Invalid deck".to_string())
-    // }
+        let value_char = match self.value {
+            Value::Ace => 'A',
+            Value::Two => '2',
+            Value::Three => '3',
+            Value::Four => '4',
+            Value::Five => '5',
+            Value::Six => '6',
+            Value::Seven => '7',
+            Value::Eight => '8',
+            Value::Nine => '9',
+            Value::Ten => 'T',
+            Value::Jack => 'J',
+            Value::Queen => 'Q',
+            Value::King => 'K',
+            Value::Joker => {
+                if suit_char == 'H' {
+                    suit_char = 'J';
+                    'R'
+                } else {
+                    suit_char = 'J';
+                    'B'
+                }
+            }
+        };
+        format!("{}{}", value_char, suit_char)
+    }
 }
 
-struct Card {
+pub struct Card {
     pub data: CardData,
     pub prev: Option<Weak<RefCell<Card>>>,
     pub next: Option<Rc<RefCell<Card>>>,
@@ -126,7 +146,20 @@ impl Card {
     }
 }
 
-struct Deck {
+impl PartialEq for Card {
+    fn eq(&self, other: &Self) -> bool {
+        self.data == other.data
+    }
+}
+
+impl fmt::Display for Card {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        let carddata = self.data.to_str();
+        write!(f, "{}", carddata)
+    }
+}
+
+pub struct Deck {
     first: Option<Rc<RefCell<Card>>>,
     last: Option<Rc<RefCell<Card>>>,
 }
@@ -141,7 +174,7 @@ impl Deck {
 
     pub fn append(&mut self, data: &str) {
         let carddata;
-        match CardData::string_to_carddata(data) {
+        match CardData::from_str(data) {
             Some(data) => carddata = data,
             None => panic!("{} invalid card", data),
         }
@@ -155,7 +188,7 @@ impl Deck {
         }
     }
 
-    pub fn from_string(input: &str) -> Self {
+    pub fn from_str(input: &str) -> Self {
         let cards_strings: Vec<&str> = input.trim().split_whitespace().collect();
         let mut deck = Self::new();
         for card_string in cards_strings {
@@ -166,53 +199,43 @@ impl Deck {
     }
 }
 
+impl Default for Deck {
+    fn default() -> Deck {
+        let input = "AC 2C 3C 4C 5C 6C 7C 8C 9C TC JC QC KC AD 2D 3D 4D 5D 6D 7D 8D 9D TD JD QD KD AH 2H 3H 4H 5H 6H 7H 8H 9H TH JH QH KH AS 2S 3S 4S 5S 6S 7S 8S 9S TS JS QS KS RJ BJ";
+        let cards_strings: Vec<&str> = input.trim().split_whitespace().collect();
+        let mut deck = Self::new();
+
+        for card_string in cards_strings {
+            deck.append(card_string);
+        }
+
+        deck
+    }
+}
+
 impl fmt::Display for Deck {
-    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        let mut cards = vec![];
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         let mut current = self.first.clone();
+        let mut cards = Vec::new();
 
         while let Some(node) = current {
             let card = node.borrow();
             cards.push(format!("{}", card));
             current = card.next.clone();
+
+            if let Some(last) = self.last.as_ref() {
+                if Rc::ptr_eq(&node, last) {
+                    break;
+                }
+            }
         }
 
         write!(f, "{}", cards.join(", "))
     }
 }
 
-impl fmt::Display for Card {
-    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        let value_char = match self.data.value {
-            Value::Ace => 'A',
-            Value::Two => '2',
-            Value::Three => '3',
-            Value::Four => '4',
-            Value::Five => '5',
-            Value::Six => '6',
-            Value::Seven => '7',
-            Value::Eight => '8',
-            Value::Nine => '9',
-            Value::Ten => 'T',
-            Value::Jack => 'J',
-            Value::Queen => 'Q',
-            Value::King => 'K',
-            Value::Joker => '?',
-        };
-
-        let suit_char = match self.data.suit {
-            Suit::Spades => 'S',
-            Suit::Hearts => 'H',
-            Suit::Clubs => 'C',
-            Suit::Diamonds => 'D',
-        };
-
-        write!(f, "{}{}", value_char, suit_char)
-    }
-}
-
 fn main() {
-    let list = Deck::from_string(" AS AH 3H");
+    let list = Deck::from_str("AS RJ BJ 3H 3S 4S");
 
     println!("{}", list);
 }
