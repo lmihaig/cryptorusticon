@@ -11,7 +11,7 @@ fn main() {
     match custom {
         Ok(mut bbs) => {
             for i in 0..10 {
-                println!("{} {}", i, bbs.generate_u32());
+                println!("{} {}", i, bbs.generate_u16());
             }
         }
         Err(errors) => {
@@ -28,7 +28,7 @@ fn main() {
     match w_rand_primes {
         Ok(mut bbs) => {
             for i in 0..10 {
-                println!("{} {}", i, bbs.generate_u32());
+                println!("{} {}", i, bbs.generate_u8());
             }
         }
         Err(err) => {
@@ -36,4 +36,8 @@ fn main() {
             println!("  - {}", err);
         }
     }
+
+    println!("Generate fully random:");
+    let mut full_random = cryptorusticon::bbs::BBS::with_full_random(256).unwrap();
+    println!("{}", full_random.generate_u32());
 }

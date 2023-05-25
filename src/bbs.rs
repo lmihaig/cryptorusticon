@@ -1,7 +1,7 @@
 #![allow(non_snake_case)]
 
-use num::bigint::ToBigUint;
-use num::{BigUint, Integer, One};
+use num::bigint::{RandBigInt, ToBigUint};
+use num::{BigUint, Integer, One, Zero};
 use num_prime::nt_funcs::is_prime;
 use num_prime::RandPrime;
 use rand::rngs::StdRng;
@@ -61,6 +61,34 @@ impl BBS {
         Ok(BBS { p, q, M, seed })
     }
 
+    pub fn with_full_random(num_bits: usize) -> Result<BBS, String> {
+        if num_bits < 256 {
+            return Err(format!("{} less than minimum 256 bits", num_bits));
+        }
+        let mut rng = rand::thread_rng();
+        let mut seed: BigUint;
+        let mut p: BigUint;
+        let mut q: BigUint;
+        let mut M: BigUint;
+
+        loop {
+            p = rng.gen_prime(num_bits, None);
+            q = rng.gen_prime(num_bits, None);
+            if !Self::check_primes_validity(&p, &q).is_empty() {
+                continue;
+            }
+
+            M = &p * &q;
+            seed = rng.gen_biguint_range(&BigUint::zero(), &M);
+            if M.gcd(&seed) != BigUint::one() {
+                continue;
+            }
+
+            break;
+        }
+        Ok(BBS { p, q, M, seed })
+    }
+
     fn check_validity(x: &BigUint) -> Result<bool, String> {
         if x % &BigUint::from(4u32) != BigUint::from(3u32) {
             return Err(format!("{} % 4 != 3", x));
@@ -73,7 +101,7 @@ impl BBS {
     }
 
     fn check_primes_validity(p: &BigUint, q: &BigUint) -> Vec<String> {
-        // TODO: should be safe primes with a small gcd((p-3)/2, (q-3)/2) (this makes the cycle length large).
+        // TODO: should be safe primes with a small gcd((p-3)/2, (q-3)/2) (this makes the cycle length large). but what is "small"?
         let mut errors = Vec::new();
         match Self::check_validity(p) {
             Err(msg) => errors.push(msg),
@@ -156,3 +184,5 @@ impl Default for BBS {
         BBS { p, q, M, seed }
     }
 }
+
+
